@@ -16,8 +16,8 @@
 #define likely(x)	__builtin_expect((x),1)
 #define unlikely(x)	__builtin_expect((x),0)
 
-#define ANTIALIASING 3
-#define MAX_ITER 25000
+#define ANTIALIASING 1
+#define MAX_ITER 15000
 
 // Count the digits in a positive number
 static unsigned int GetDigitCount(unsigned int num)
@@ -62,13 +62,12 @@ struct Fractal *Fractal_Create(char *file_name, int width, int height, long doub
 	int header_length = asprintf(&header, "P6\n%d %d\n255\n", width, height);
 
 	if (header_length == -1) {
-		if (close( fractal->fd) == -1) {
+		if (close(fractal->fd) == -1) {
 			// Should probably handle this error
 		}
 		
 		free(fractal);
 		return NULL;
-	
 	}
 	
 	write(fractal->fd, header, header_length);
@@ -96,7 +95,7 @@ struct Fractal *Fractal_Create(char *file_name, int width, int height, long doub
 	return fractal;
 }
 
-void Fractal_Destroy(struct Fractal *fracta )
+void Fractal_Destroy(struct Fractal *fractal)
 {
 	if(munmap(fractal->map, fractal->file_size) == -1) {
 		perror("Failed to unmap file");
@@ -123,27 +122,26 @@ void *Fractal_Render(void *arg)
 {
 	struct Fractal *fractal = arg;
 	
-	long double escape = 1000.0l;
+	long double escape = 2.0l;
 	long double escape_squared = escape * escape;
 	
-	long double ratio = fractal->height;
+	long double ratio = fractal->height / fractal->width;
 	
 	long double log_escape = logl(escape);
 	long double log_two = logl(2.0l);
 	
-	ratio /= fractal->width;
-
 	for (;;) {
 		// Lock
 		pthread_mutex_lock(&fractal->lock);
 		
 		int line = fractal->line;
 	
-		if(line >= fractal->height) {
+		if (line >= fractal->height) {
+			// No more rendering to perform
 			pthread_mutex_unlock(&fractal->lock);
-		
 			return NULL;
 		} else {
+			// Fetch the next horizontal line to render
 			fractal->line++;
 			
 			printf("\r%d / %d", fractal->line, fractal->height);
@@ -180,6 +178,7 @@ void *Fractal_Render(void *arg)
 						num += c;
 						
 						if (unlikely(creall(num) * creall(num) + cimagl(num) * cimagl(num) >= escape_squared)) {
+							// Perform smoothing
 							long double moo = i + 1.0l - (logl(logl(cabs(num)) / log_escape) / log_two);
 							
 							moo = logl(moo);
