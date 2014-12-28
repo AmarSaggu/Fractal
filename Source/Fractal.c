@@ -16,8 +16,8 @@
 #define likely(x)	__builtin_expect((x),1)
 #define unlikely(x)	__builtin_expect((x),0)
 
-#define ANTIALIASING 1
-#define MAX_ITER 15000
+#define ANTIALIASING 2
+#define MAX_ITER 25000
 
 // Count the digits in a positive number
 static unsigned int GetDigitCount(unsigned int num)
@@ -122,10 +122,11 @@ void *Fractal_Render(void *arg)
 {
 	struct Fractal *fractal = arg;
 	
-	long double escape = 2.0l;
+	long double escape = 1000.0l;
 	long double escape_squared = escape * escape;
 	
-	long double ratio = fractal->height / fractal->width;
+	long double ratio = fractal->height;
+	ratio /= fractal->width;
 	
 	long double log_escape = logl(escape);
 	long double log_two = logl(2.0l);
