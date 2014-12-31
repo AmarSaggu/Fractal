@@ -10,6 +10,8 @@
 
 #define THREADS 8
 
+#include <limits.h>
+
 int main()
 {
 	//long double complex position = -9.156725634575431530763915102604629272702E-01l + -2.764022557666976021281036574985851235422E-01 * I;
