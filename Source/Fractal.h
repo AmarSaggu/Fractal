@@ -1,5 +1,7 @@
 #pragma once
 
+#include "Image.h"
+
 #include <pthread.h>
 
 #include <complex.h>
@@ -8,13 +10,10 @@
 
 struct Fractal
 {
+	struct Image *image;
+	
 	unsigned int width, height;
 	
-	int fd;
-	uint8_t *map, *array;
-	
-	size_t file_size, array_size;
-
 	long double complex position;
 	long double zoom;
 	

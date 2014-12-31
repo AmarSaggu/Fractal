@@ -1,4 +1,6 @@
 #include "Fractal.h"
+#include "Image.h"
+
 
 #include <pthread.h>
 
@@ -32,79 +34,39 @@ static unsigned int GetDigitCount(unsigned int num)
 	return digit_count;
 }
 
-struct Fractal *Fractal_Create(char *file_name, int width, int height, long double complex position, long double zoom)
+struct Fractal *Fractal_Create(char *filename, int width, int height, long double complex position, long double zoom)
 {
 	struct Fractal *fractal = malloc(sizeof (struct Fractal));
+	
 	if (!fractal) {
 		return NULL;
 	}
 	
+	struct Image *image = image_create(width, height, filename);
+
+	if (!image) {
+		free(fractal);
+		return NULL;
+	}
+	
+	pthread_mutex_init(&fractal->lock, NULL);
+	
+	fractal->image = image;
 	fractal->width = width;
 	fractal->height = height;
 	fractal->position = position;
 	fractal->zoom = zoom;	
 	fractal->line = 0;
 	
-	pthread_mutex_init(&fractal->lock, NULL);
-	
-	// Open file
-	fractal->fd = open(file_name, O_RDWR | O_CREAT | O_TRUNC, 0666);
-	
-	if (fractal->fd == -1) {
-		perror("Error opening file");
-
-		free(fractal);	
-		return NULL;
-	}
-	
-	// Write PPM image header
-	char *header;
-	int header_length = asprintf(&header, "P6\n%d %d\n255\n", width, height);
-
-	if (header_length == -1) {
-		if (close(fractal->fd) == -1) {
-			// Should probably handle this error
-		}
-		
-		free(fractal);
-		return NULL;
-	}
-	
-	write(fractal->fd, header, header_length);
-	
-	free(header);
-	
-	// Resize file to full-size
-	fractal->array_size = width * height * 3;
-	fractal->file_size = header_length + fractal->array_size;
-	
-	lseek(fractal->fd, fractal->array_size - 1, SEEK_CUR);
-	
-	write(fractal->fd, "", 1);
-	
-	// Map file to memory
-	fractal->map = mmap(NULL, fractal->file_size, PROT_WRITE, MAP_SHARED, fractal->fd, 0);
-	
-	if (fractal->map == MAP_FAILED) {
-		perror("Error mapping file");
-		return NULL;
-	}
-	
-	fractal->array = fractal->map + header_length;
-
 	return fractal;
 }
 
 void Fractal_Destroy(struct Fractal *fractal)
 {
-	if(munmap(fractal->map, fractal->file_size) == -1) {
-		perror("Failed to unmap file");
-	}
+	image_close(fractal->image);
 	
-	close(fractal->fd);
-
 	pthread_mutex_destroy(&fractal->lock);
-
+	
 	free(fractal);
 }
 
@@ -121,6 +83,8 @@ static inline uint8_t Wrap(unsigned int num)
 void *Fractal_Render(void *arg)
 {
 	struct Fractal *fractal = arg;
+	
+	uint8_t *array = fractal->image->array;
 	
 	long double escape = 1000.0l;
 	long double escape_squared = escape * escape;
@@ -196,9 +160,9 @@ void *Fractal_Render(void *arg)
 		
 			//co /= 3.35423;
 		
-			fractal->array[(x + line * fractal->width) * 3] = Wrap(co * 4.34532457l); 
-			fractal->array[(x + line * fractal->width) * 3 + 1] = Wrap(co * 2.93324292l);
-			fractal->array[(x + line * fractal->width) * 3 + 2] = Wrap(co * 1.2273444l);
+			array[(x + line * fractal->width) * 3] = Wrap(co * 4.34532457l); 
+			array[(x + line * fractal->width) * 3 + 1] = Wrap(co * 2.93324292l);
+			array[(x + line * fractal->width) * 3 + 2] = Wrap(co * 1.2273444l);
 		}
 	}
 }
