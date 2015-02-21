@@ -8,7 +8,7 @@
 
 #include <math.h>
 
-#define THREADS 8
+#define THREADS 4
 
 #include <limits.h>
 
@@ -23,18 +23,17 @@ int main()
 	//long double zoom = 9.998146882276323755254436873673271488478E-16l;
 	//long double zoom = 1.0l;
 	
-	for (int frame = 0; frame < 1700; frame += 2) {		
-		long double zoom = powl(0.95, frame / 2);
-		//if (frame > 400) {
-		//long double zoom  = powl(0.5l, frame - 50);
+	for (int frame = 100; frame < 800; frame++) {		
+		long double zoom = powl(0.95, frame);
 		
 		char *filename;
 		asprintf(&filename, "Image-%u.ppm", frame + 1);
 
-		struct Fractal *fractal = Fractal_Create(filename, 1920 * 2, 1080 * 2, position, zoom);
+		struct Fractal *fractal = Fractal_Create(filename, 1920 * 1, 1080 * 1, position, zoom);
 
 		pthread_t thread[THREADS];
-
+		
+		// Launch the threads
 		for(int i = 0; i < THREADS; ++i) {
 			 pthread_create(&thread[ i ], NULL, Fractal_Render, fractal);
 		}
@@ -48,9 +47,6 @@ int main()
 		Fractal_Destroy(fractal);
 
 		free(filename);
-		//}
-		
-		//zoom *= 0.95l;
 	}
 	
 	return 0;
